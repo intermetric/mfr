@@ -1,0 +1,18 @@
+{
+  "name": "music-folder-rename",
+  "version": "1.0.0",
+  "description": "Utility to rename music release folders based on audio metadata",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "rename": "node src/index.js"
+  },
+  "author": "Rando Leppik",
+  "license": "ISC",
+  "dependencies": {
+    "chalk": "^5.1.2",
+    "dotenv": "^16.0.3",
+    "mp3tag.js": "^3.3.2",
+    "music-metadata": "^8.1.0"
+  }
+}
