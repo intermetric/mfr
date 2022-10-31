@@ -23,7 +23,7 @@ const renameFolder = ({ path, original, audioFile, release }) => {
       );
     } else {
       log(
-        chalk.green(`Successfully renamed '${previousName}' to '${folderName}'`)
+        chalk.green(`Successfully renamed '${previousName}' to '${parsedName}'`)
       );
     }
   });

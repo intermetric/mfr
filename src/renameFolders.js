@@ -37,32 +37,28 @@ const renameFolders = async (path) => {
             release = {
               artist: musicMetadata.common.artist,
               title: musicMetadata.common.album,
-              year: musicMetadata.common.year?.toString() ?? "",
+              year: musicMetadata.common.year?.toString(),
             };
           }
 
-          if (release.artist && release.title && release.year) {
-            renameFolder({
-              path,
-              original: folder,
-              audioFile,
-              release,
-            });
-          } else if (release.artist && release.title) {
+          if (!release.artist) {
+            return log(chalk.red("No artist found for", file));
+          } else if (!release.title) {
+            return log(chalk.red("No title found for", file));
+          } else if (!release.year) {
             const year = await findReleaseYearInDiscogs({
               artist: release.artist,
               title: release.title,
             });
-            release = { ...release, year: year ?? "" };
-            renameFolder({
-              path,
-              original: folder,
-              audioFile,
-              release,
-            });
-          } else {
-            log(chalk.red("No release artist nor title found for", file));
+            release = { ...release, year };
           }
+
+          renameFolder({
+            path,
+            original: folder,
+            audioFile,
+            release,
+          });
         } else {
           log(chalk.red("No audio files found in", file));
         }
