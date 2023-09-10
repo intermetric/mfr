@@ -13,8 +13,8 @@ program
   .version("0.0.1")
   .command("rename")
   .argument("[location]", "Folder location")
-  .action(async (location) => {
-    await renameFolders(location.replaceAll("^", ""));
+  .action((location) => {
+    renameFolders(location.replaceAll("^", ""));
   });
 
 program.parse();

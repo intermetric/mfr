@@ -5,7 +5,18 @@ import MP3Tag from "mp3tag.js";
 import { findReleaseInDiscogs } from "./providers/Discogs.js";
 import { log } from "./utils.js";
 
-type Release = {
+type FolderData = {
+  path: fs.PathLike;
+  folder: string;
+  audioFile: string;
+};
+
+type RenameData = {
+  previousName: string;
+  newName: string;
+};
+
+export type Release = {
   artist: string | undefined;
   title: string | undefined;
   year: string | undefined;
@@ -18,52 +29,58 @@ export default class Renamer {
     year: "",
   };
 
+  private fileFormat: string = "";
+
   public async renameFolders({
     path,
-    filePath,
     folder,
     audioFile,
-  }: {
-    path: fs.PathLike;
-    filePath: string;
-    folder: string;
-    audioFile: string;
-  }) {
+  }: FolderData): Promise<void> {
+    const filePath = `${folder}/${audioFile}`;
+
     this.getMp3TagMetadata(filePath);
 
     await this.validateMetadata(filePath);
 
-    const { newName } = this.formatFolderName({
-      folder,
-      audioFile,
-    });
+    if (this.release.artist && this.release.title && this.release.year) {
+      if (Path.extname(audioFile).endsWith(".flac")) {
+        this.fileFormat = "[FLAC]";
+      }
 
-    this.rename({
-      prevName: folder,
-      newName: `${path}/${newName}`,
-    });
+      const newName = this.formatFolderName();
+
+      this.rename({
+        previousName: folder,
+        newName: `${path}/${newName}`,
+      });
+    }
   }
 
-  private async validateMetadata(filePath: string) {
-    if (!this.release || !this.release.artist || !this.release.title) {
+  private async validateMetadata(filePath: string): Promise<void> {
+    const { artist, title, year } = this.release;
+
+    if (!this.release || !artist || !title) {
       await this.getMusicMetadata(filePath);
     }
 
-    if (!this.release.artist) {
-      return log.error(`No artist found for ${filePath}`);
-    }
-    if (!this.release.title) {
-      return log.error(`No title found for ${filePath}`);
+    if (!artist) {
+      log.error(`No artist found for ${filePath}`);
+      return;
     }
 
-    if (this.release.artist && this.release.title && !this.release.year) {
-      const release = await findReleaseInDiscogs({
-        artist: this.release.artist,
-        title: this.release.title,
+    if (!title) {
+      log.error(`No title found for ${filePath}`);
+      return;
+    }
+
+    if (artist && title && !year) {
+      const discogsRelease = await findReleaseInDiscogs({
+        artist,
+        title,
       });
 
-      if (release && release.year) {
-        this.release.year = release.year;
+      if (discogsRelease?.year) {
+        this.release.year = discogsRelease.year;
       }
     }
   }
@@ -83,8 +100,8 @@ export default class Renamer {
         this.release.title = v2.TALB ?? v1.album;
         this.release.year = v2.TYER ?? v1.year;
       }
-    } catch (error: any) {
-      log.error(`Something went wrong getting Mp3Tag metadata: ${error}`);
+    } catch {
+      log.error("Something went wrong getting Mp3Tag metadata @", filePath);
     }
   }
 
@@ -96,51 +113,29 @@ export default class Renamer {
       this.release.title = musicMetadata.common.album;
       this.release.year = musicMetadata.common.year?.toString();
     } catch {
-      log.error("Something went wrong getting Music Metadata data");
+      log.error("Something went wrong getting Music Metadata data @", filePath);
     }
   }
 
-  private formatFolderName({
-    folder,
-    audioFile,
-  }: {
-    folder: string;
-    audioFile: string;
-  }) {
-    let fileFormat = "";
-
-    if (Path.extname(audioFile).endsWith(".flac")) {
-      fileFormat = "[FLAC]";
-    }
-
+  private formatFolderName(): string {
     const year = this.release.year ? this.release.year.substring(0, 4) : "";
-    const formattedName = `${this.release.artist} - ${this.release.title} (${year}) ${fileFormat}`;
 
-    const previousName = folder.substring(folder.lastIndexOf("/") + 1);
-
+    const formattedName = `${this.release.artist} - ${this.release.title} (${year}) ${this.fileFormat}`;
     const newName = formattedName
       .replace(/[/\\?%*:|"<>]/g, "")
       .replace(/ +(?= )/g, "")
       .trim();
 
-    return {
-      previousName,
-      newName,
-    };
+    return newName;
   }
 
-  private rename({
-    prevName,
-    newName,
-  }: {
-    prevName: string;
-    newName: string;
-  }): void {
-    fs.rename(prevName, newName, (error: unknown) => {
+  private rename({ previousName, newName }: RenameData): void {
+    fs.rename(previousName, newName, (error: unknown) => {
       if (error) {
         log.error(`Something went wrong renaming to '${newName}'`);
         return;
       }
+
       log.success(`Successfully renamed to '${newName}'`);
     });
   }
