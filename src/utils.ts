@@ -12,12 +12,12 @@ export const mode = (data: any) => {
 };
 
 export const log = {
-  info: (message: string) => {
-    console.log(chalk.blue(message));
+  info: (message: string, data?: unknown) => {
+    console.log(chalk.blue(message, data));
     console.log("---------------------------");
   },
-  error: (message: string) => {
-    console.log(chalk.red(message));
+  error: (message: string, data?: unknown) => {
+    console.log(chalk.red(message, data));
     console.log("---------------------------");
   },
   success: (message: string) => {
